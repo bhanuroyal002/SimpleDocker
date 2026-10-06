@@ -25,11 +25,14 @@ pipeline {
             }
         }
 
-        stage('Maven Build') {
+        stage('Maven Build & Test') {
             steps {
                 sh '''
                     mvn clean package
+                    echo "WAR artifact:"
                     ls -lh target/*.war
+                    echo "JaCoCo coverage report:"
+                    ls -lh target/site/jacoco/jacoco.xml
                 '''
             }
         }
@@ -38,7 +41,9 @@ pipeline {
             steps {
                 withSonarQubeEnv("${SONARQUBE_SERVER}") {
                     sh '''
-                        mvn sonar:sonar                           -Dsonar.projectKey=movie-ticket-booking                           -Dsonar.projectName=Movie-Ticket-Booking
+                        mvn sonar:sonar \
+                          -Dsonar.projectKey=movie-ticket-booking \
+                          -Dsonar.projectName=Movie-Ticket-Booking
                     '''
                 }
             }
@@ -71,7 +76,13 @@ pipeline {
         stage('Trivy Scan - App') {
             steps {
                 sh '''
-                    TMPDIR=/var/lib/trivy-tmp trivy image                       --cache-dir /var/lib/trivy                       --scanners vuln                       --severity HIGH,CRITICAL                       --ignore-unfixed                       --exit-code 0                       "${APP_IMAGE}:${BUILD_NUMBER}"
+                    TMPDIR=/var/lib/trivy-tmp trivy image \
+                      --cache-dir /var/lib/trivy \
+                      --scanners vuln \
+                      --severity HIGH,CRITICAL \
+                      --ignore-unfixed \
+                      --exit-code 0 \
+                      "${APP_IMAGE}:${BUILD_NUMBER}"
                 '''
             }
         }
@@ -79,7 +90,13 @@ pipeline {
         stage('Trivy Scan - DB') {
             steps {
                 sh '''
-                    TMPDIR=/var/lib/trivy-tmp trivy image                       --cache-dir /var/lib/trivy                       --scanners vuln                       --severity HIGH,CRITICAL                       --ignore-unfixed                       --exit-code 0                       "${DB_IMAGE}:${BUILD_NUMBER}"
+                    TMPDIR=/var/lib/trivy-tmp trivy image \
+                      --cache-dir /var/lib/trivy \
+                      --scanners vuln \
+                      --severity HIGH,CRITICAL \
+                      --ignore-unfixed \
+                      --exit-code 0 \
+                      "${DB_IMAGE}:${BUILD_NUMBER}"
                 '''
             }
         }
@@ -115,9 +132,11 @@ pipeline {
     }
 
     post {
+        always {
+            junit testResults: 'target/surefire-reports/*.xml', allowEmptyResults: true
+        }
         success {
             archiveArtifacts artifacts: 'target/*.war', allowEmptyArchive: true
-            junit testResults: 'target/surefire-reports/*.xml', allowEmptyResults: true
             echo "Pipeline completed successfully. Build: ${BUILD_NUMBER}"
         }
         failure {
