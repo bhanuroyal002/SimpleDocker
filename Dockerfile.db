@@ -1,0 +1,10 @@
+FROM mysql:8.0
+
+ENV MYSQL_DATABASE=moviebooking
+ENV MYSQL_USER=movieuser
+ENV MYSQL_PASSWORD=moviepass
+ENV MYSQL_ROOT_PASSWORD=rootpass
+
+COPY db/init.sql /docker-entrypoint-initdb.d/init.sql
+
+EXPOSE 3306
