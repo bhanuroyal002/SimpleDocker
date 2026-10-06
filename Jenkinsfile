@@ -104,9 +104,8 @@ pipeline {
         stage('Docker Compose Deploy') {
             steps {
                 sh '''
-                    export IMAGE_TAG="${BUILD_NUMBER}"
-                    docker compose down || true
-                    docker compose up -d
+                    IMAGE_TAG="${BUILD_NUMBER}" docker compose down || true
+                    IMAGE_TAG="${BUILD_NUMBER}" docker compose up -d
                 '''
             }
         }
@@ -114,17 +113,24 @@ pipeline {
         stage('Verify Deployment') {
             steps {
                 sh '''
-                    docker compose ps
+                    echo "Deployment status:"
+                    IMAGE_TAG="${BUILD_NUMBER}" docker compose ps
+
+                    echo "Waiting for application health endpoint..."
                     for i in $(seq 1 12); do
                         if curl -fsS http://localhost:8081/api/health; then
                             echo
                             echo "Application is healthy."
                             exit 0
                         fi
-                        echo "Waiting for application..."
+                        echo "Waiting for application... attempt ${i}/12"
                         sleep 5
                     done
-                    docker compose logs --tail=100 app
+
+                    echo "Application health check failed."
+                    IMAGE_TAG="${BUILD_NUMBER}" docker compose ps
+                    IMAGE_TAG="${BUILD_NUMBER}" docker compose logs --tail=100 app
+                    IMAGE_TAG="${BUILD_NUMBER}" docker compose logs --tail=100 db
                     exit 1
                 '''
             }
