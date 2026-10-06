@@ -112,6 +112,6 @@ function toast(m){
   t.classList.add("show");
   setTimeout(()=>t.classList.remove("show"),3200);
 }
-function esc(v){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",""":"&quot;","'":"&#039;"}[c]));}
+function esc(v){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]));}
 $("bookButton").addEventListener("click",submitBooking);
 init();
