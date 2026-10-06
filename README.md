@@ -9,6 +9,8 @@ A Spring Boot movie ticket booking application for practicing an end-to-end DevO
 - Spring JDBC
 - MySQL 8.0
 - HTML / CSS / JavaScript
+- JUnit 5 / Spring Boot Test
+- JaCoCo
 - Jenkins
 - GitHub
 - SonarQube
@@ -51,25 +53,30 @@ http://<EC2_PUBLIC_IP>:8081/api/health
 ├── db/
 │   └── init.sql
 └── src/
-    └── main/
-        ├── java/
-        │   └── com/movie/booking/
-        │       └── MovieBookingApplication.java
-        └── resources/
-            ├── static/
-            │   ├── index.html
-            │   ├── style.css
-            │   └── app.js
-            ├── application.properties
-            └── schema.sql
+    ├── main/
+    │   ├── java/
+    │   │   └── com/movie/booking/
+    │   │       └── MovieBookingApplication.java
+    │   └── resources/
+    │       ├── static/
+    │       │   ├── index.html
+    │       │   ├── style.css
+    │       │   └── app.js
+    │       ├── application.properties
+    │       └── schema.sql
+    └── test/
+        └── java/
+            └── com/movie/booking/
+                └── MovieBookingApplicationTest.java
 ```
 
 ## Important Files
 | File | Purpose |
 |---|---|
 | `Jenkinsfile` | Jenkins CI/CD pipeline |
-| `pom.xml` | Maven build, dependencies and Sonar Maven plugin |
+| `pom.xml` | Maven build, dependencies, Sonar Maven plugin and JaCoCo |
 | `MovieBookingApplication.java` | Spring Boot application and REST APIs |
+| `MovieBookingApplicationTest.java` | Controller/API tests |
 | `static/index.html` | MovieMate frontend |
 | `static/style.css` | Responsive UI styling |
 | `static/app.js` | Booking UI and API integration |
@@ -80,15 +87,42 @@ http://<EC2_PUBLIC_IP>:8081/api/health
 | `Dockerfile.db` | MySQL image |
 | `docker-compose.yml` | Application + database deployment |
 
-## Local Build
+## Local Build and Test
+Build the application and run the tests:
+
 ```bash
 mvn clean package
 ```
 
-Generated artifact:
+Generated files:
+
 ```text
 target/movie-ticket-booking.war
+target/site/jacoco/jacoco.xml
+target/surefire-reports/*.xml
 ```
+
+The tests use Spring Boot Test + MockMvc with a mocked JdbcTemplate, so the API tests do not require a running MySQL instance.
+
+## Test Coverage
+
+The project uses JaCoCo to generate an XML coverage report for SonarQube.
+
+Current tests cover:
+- Movie listing
+- Health endpoint
+- Successful booking
+- Maximum 6-seat validation
+- Movie-not-found handling
+- Invalid customer/booking data validation
+
+JaCoCo is configured in `pom.xml` and generates:
+
+```text
+target/site/jacoco/jacoco.xml
+```
+
+SonarQube reads this report during the analysis stage.
 
 ## Current CI/CD Pipeline
 ```text
@@ -96,7 +130,9 @@ GitHub
    ↓
 Pull Code
    ↓
-Maven Build
+Maven Build & Unit Tests
+   ↓
+JaCoCo Coverage Report
    ↓
 SonarQube Analysis
    ↓
@@ -115,14 +151,34 @@ Docker Compose Deploy
 Application Health Check
 ```
 
-### Maven
-Jenkins uses the configured `Maven-3.9` installation and produces the WAR artifact.
+### Maven Build & Test
+Jenkins uses the configured `Maven-3.9` installation and runs:
+
+```bash
+mvn clean package
+```
+
+This compiles the application, executes JUnit tests, generates the WAR and creates the JaCoCo coverage report.
+
+Jenkins also publishes the Surefire test results to the build.
 
 ### SonarQube
-The pipeline runs `mvn sonar:sonar` and waits for the SonarQube Quality Gate. The Sonar Maven plugin is explicitly configured in `pom.xml`.
+The pipeline runs `mvn sonar:sonar` and waits for the SonarQube Quality Gate.
+
+The Sonar Maven plugin and JaCoCo plugin are explicitly configured in `pom.xml`.
+
+### Quality Gate
+The pipeline uses:
+
+```groovy
+waitForQualityGate abortPipeline: true
+```
+
+Therefore, a failed SonarQube Quality Gate stops Docker build and deployment stages.
 
 ### Docker
 Images are tagged with the Jenkins build number:
+
 ```text
 movie-ticket-booking:<BUILD_NUMBER>
 movie-ticket-db:<BUILD_NUMBER>
@@ -143,6 +199,7 @@ The app is exposed as host `8081 → container 8080`. MySQL port 3306 is not pub
 
 ### Deployment Verification
 Jenkins verifies:
+
 ```text
 GET http://localhost:8081/api/health
 ```
@@ -161,6 +218,7 @@ Configure:
 - SonarQube server name: `SonarQube`
 
 The Jenkins agent should provide:
+
 ```bash
 java --version
 mvn --version
@@ -172,15 +230,16 @@ trivy --version
 ## Nexus Artifact Repository
 
 ### Can Nexus be integrated?
-**Yes. Nexus Repository can be integrated and is a good next improvement for this project.**
+**Yes. Nexus Repository can be integrated and is the next recommended improvement.**
 
 Currently the pipeline goes directly from Maven build to Docker image creation. Nexus is not yet active in the pipeline.
 
 With Nexus, the recommended flow becomes:
+
 ```text
 GitHub
    ↓
-Maven Build
+Maven Build & Test
    ↓
 SonarQube
    ↓
@@ -199,11 +258,13 @@ Nexus can store the WAR centrally so the same immutable artifact can be reused f
 
 ### Recommended Nexus Repository
 Create a Maven hosted repository, for example:
+
 ```text
 movie-releases
 ```
 
 Recommended coordinates:
+
 ```text
 Group ID:    com.movie
 Artifact ID: movie-ticket-booking
@@ -211,15 +272,9 @@ Packaging:   war
 Version:     1.0.<BUILD_NUMBER>
 ```
 
-Example:
-```text
-movie-releases/
-└── com/movie/movie-ticket-booking/1.0.25/
-    └── movie-ticket-booking-1.0.25.war
-```
-
 ### Jenkins + Nexus
 Jenkins should authenticate to Nexus using a Jenkins credential such as:
+
 ```text
 Credential ID: nexus-credentials
 Nexus URL:     http://<NEXUS_HOST>:8081
@@ -227,28 +282,6 @@ Repository:    movie-releases
 ```
 
 Credentials must not be hard-coded in the Jenkinsfile.
-
-### Build Once, Promote
-Nexus enables a cleaner DevOps model:
-```text
-Source Code
-    ↓
-Build / Test
-    ↓
-SonarQube
-    ↓
-Quality Gate
-    ↓
-Publish immutable WAR to Nexus
-    ↓
-Build container from the stored artifact
-    ↓
-Security scan
-    ↓
-Deploy
-```
-
-This avoids rebuilding different binaries for different environments.
 
 ## Production Readiness
 This is currently a production-style DevOps practice application, not a complete commercial ticket-booking platform.
@@ -258,6 +291,8 @@ Implemented:
 - Persistent database
 - Health check
 - CI/CD pipeline
+- Automated unit/API tests
+- JaCoCo coverage
 - SonarQube Quality Gate
 - Trivy scanning
 - Docker Compose deployment
@@ -280,6 +315,7 @@ Still required for a real commercial production platform:
 
 ## Security Notes
 The current database credentials are for learning only:
+
 ```text
 DB_USER=movieuser
 DB_PASSWORD=moviepass
@@ -292,8 +328,9 @@ For production, use Jenkins credentials, Docker/Kubernetes secrets or an externa
 `https://github.com/bhanuroyal002/SimpleDocker`
 
 ## Next DevOps Enhancement
-The next CI/CD improvement is to integrate Nexus so the Maven WAR is published centrally before Docker image creation. This will make the project demonstrate a more complete enterprise-style flow:
+The next CI/CD improvement is to integrate Nexus so the Maven WAR is published centrally before Docker image creation:
 
 ```text
-GitHub → Jenkins → Maven → SonarQube → Quality Gate → Nexus → Docker → Trivy → Compose → Health Check
+GitHub → Jenkins → Maven → Tests → JaCoCo → SonarQube
+       → Quality Gate → Nexus → Docker → Trivy → Compose → Health Check
 ```
