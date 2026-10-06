@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    options {
+        disableConcurrentBuilds()
+    }
+
     environment {
         APP_NAME = 'movie-ticket-booking'
         APP_IMAGE = 'movie-ticket-booking'
@@ -30,33 +34,60 @@ pipeline {
         stage('Prepare Release Version') {
             steps {
                 script {
-                    def currentVersion = sh(
-                        returnStdout: true,
-                        script: 'mvn help:evaluate -Dexpression=project.version -q -DforceStdout'
-                    ).trim()
+                    withCredentials([usernamePassword(
+                        credentialsId: 'nexus-credentials',
+                        usernameVariable: 'NEXUS_USERNAME',
+                        passwordVariable: 'NEXUS_PASSWORD'
+                    )]) {
+                        def latestVersion = sh(
+                            returnStdout: true,
+                            script: '''
+                                set +x
+                                curl -fsS -u "$NEXUS_USERNAME:$NEXUS_PASSWORD" \
+                                  "${NEXUS_REPO_URL}com/movie/movie-ticket-booking/maven-metadata.xml"
+                            '''
+                        ).trim()
 
-                    if (!(currentVersion ==~ /\d+\.\d+\.\d+/)) {
-                        error("Unsupported POM version '${currentVersion}'. Expected MAJOR.MINOR.PATCH.")
+                        latestVersion = sh(
+                            returnStdout: true,
+                            script: """
+                                printf '%s' '${latestVersion}' | \
+                                sed -n 's:.*<release>\\([^<]*\\)</release>.*:\\1:p' | head -n 1
+                            """
+                        ).trim()
+
+                        if (!latestVersion) {
+                            latestVersion = sh(
+                                returnStdout: true,
+                                script: 'mvn help:evaluate -Dexpression=project.version -q -DforceStdout'
+                            ).trim()
+                            echo "No released version found in Nexus. Using POM version ${latestVersion} as the starting version."
+                        } else {
+                            echo "Latest released version in Nexus: ${latestVersion}"
+                        }
+
+                        if (!(latestVersion ==~ /\d+\.\d+\.\d+/)) {
+                            error("Unsupported latest Nexus version '${latestVersion}'. Expected MAJOR.MINOR.PATCH.")
+                        }
+
+                        def parts = latestVersion.tokenize('.')
+                        def nextVersion = "${parts[0]}.${parts[1]}.${parts[2].toInteger() + 1}"
+
+                        env.RELEASE_VERSION = nextVersion
+
+                        sh """
+                            mvn org.codehaus.mojo:versions-maven-plugin:2.19.1:set \
+                              -DnewVersion=${RELEASE_VERSION} \
+                              -DgenerateBackupPoms=false
+
+                            echo "Latest Nexus release: ${latestVersion}"
+                            echo "Release version: ${RELEASE_VERSION}"
+                            mvn help:evaluate -Dexpression=project.version -q -DforceStdout
+                        """
                     }
-
-                    def parts = currentVersion.tokenize('.')
-                    def nextVersion = "${parts[0]}.${parts[1]}.${parts[2].toInteger() + 1}"
-
-                    env.RELEASE_VERSION = nextVersion
-
-                    sh """
-                        mvn org.codehaus.mojo:versions-maven-plugin:2.19.1:set \
-                          -DnewVersion=${RELEASE_VERSION} \
-                          -DgenerateBackupPoms=false
-
-                        echo "POM version: ${currentVersion}"
-                        echo "Release version: ${RELEASE_VERSION}"
-                        mvn help:evaluate -Dexpression=project.version -q -DforceStdout
-                    """
                 }
             }
         }
-
         stage('Maven Build & Test') {
             steps {
                 sh '''
@@ -85,7 +116,7 @@ pipeline {
 
         stage('Quality Gate') {
             steps {
-                timeout(time: 2, unit: 'MINUTES') {
+                timeout(time: 5, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
                 }
             }
