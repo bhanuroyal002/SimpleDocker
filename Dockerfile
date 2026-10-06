@@ -1,9 +1,9 @@
-FROM tomcat:10.1-jdk17
+FROM eclipse-temurin:17-jre
 
-RUN rm -rf /usr/local/tomcat/webapps/*
+WORKDIR /app
 
-COPY movie-ticket-booking-*.war /usr/local/tomcat/webapps/ROOT.war
+COPY movie-ticket-booking.war app.war
 
 EXPOSE 8080
 
-CMD ["catalina.sh", "run"]
+ENTRYPOINT ["java", "-jar", "app.war"]
