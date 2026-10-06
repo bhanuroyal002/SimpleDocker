@@ -23,6 +23,14 @@
         <jacoco.version>0.8.13</jacoco.version>
     </properties>
 
+    <distributionManagement>
+        <repository>
+            <id>nexus-releases</id>
+            <name>Nexus Movie Releases</name>
+            <url>http://localhost:8082/repository/movie-releases/</url>
+        </repository>
+    </distributionManagement>
+
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
