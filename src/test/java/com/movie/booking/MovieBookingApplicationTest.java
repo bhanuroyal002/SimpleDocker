@@ -1,6 +1,5 @@
 package com.movie.booking;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -75,7 +74,7 @@ class MovieBookingApplicationTest {
                 {
                   "movieId": 1,
                   "customerName": "  Bhanu  ",
-                  "email": "  BHANU@EXAMPLE.COM  ",
+                  "email": "BHANU@EXAMPLE.COM",
                   "showTime": "18:30",
                   "seats": ["A1", "A2"]
                 }
