@@ -12,7 +12,7 @@
 
     <groupId>com.movie</groupId>
     <artifactId>movie-ticket-booking</artifactId>
-    <version>1.0.5</version>
+    <version>1.0.6</version>
     <packaging>war</packaging>
 
     <name>Movie Ticket Booking</name>
