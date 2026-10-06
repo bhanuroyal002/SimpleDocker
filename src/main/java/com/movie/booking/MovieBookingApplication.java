@@ -13,11 +13,6 @@ public class MovieBookingApplication {
         SpringApplication.run(MovieBookingApplication.class, args);
     }
 
-    @GetMapping("/")
-    public String home() {
-        return "Movie Ticket Booking Application is Running!";
-    }
-
     @GetMapping("/movies")
     public String movies() {
         return "Available Movies: Avatar, Avengers, Inception";
