@@ -10,6 +10,8 @@ pipeline {
         MAVEN_HOME = tool('Maven-3.9')
         PATH = "${MAVEN_HOME}/bin:${env.PATH}"
         SONARQUBE_SERVER = 'SonarQube'
+        NEXUS_REPO_ID = 'nexus-releases'
+        NEXUS_REPO_URL = 'http://localhost:8082/repository/movie-releases/'
     }
 
     stages {
@@ -25,6 +27,36 @@ pipeline {
             }
         }
 
+        stage('Prepare Release Version') {
+            steps {
+                script {
+                    def currentVersion = sh(
+                        returnStdout: true,
+                        script: 'mvn help:evaluate -Dexpression=project.version -q -DforceStdout'
+                    ).trim()
+
+                    if (!(currentVersion ==~ /\d+\.\d+\.\d+/)) {
+                        error("Unsupported POM version '${currentVersion}'. Expected MAJOR.MINOR.PATCH.")
+                    }
+
+                    def parts = currentVersion.tokenize('.')
+                    def nextVersion = "${parts[0]}.${parts[1]}.${parts[2].toInteger() + 1}"
+
+                    env.RELEASE_VERSION = nextVersion
+
+                    sh """
+                        mvn org.codehaus.mojo:versions-maven-plugin:2.19.1:set \
+                          -DnewVersion=${RELEASE_VERSION} \
+                          -DgenerateBackupPoms=false
+
+                        echo "POM version: ${currentVersion}"
+                        echo "Release version: ${RELEASE_VERSION}"
+                        mvn help:evaluate -Dexpression=project.version -q -DforceStdout
+                    """
+                }
+            }
+        }
+
         stage('Maven Build & Test') {
             steps {
                 sh '''
@@ -33,6 +65,8 @@ pipeline {
                     ls -lh target/*.war
                     echo "JaCoCo coverage report:"
                     ls -lh target/site/jacoco/jacoco.xml
+                    echo "Build version:"
+                    mvn help:evaluate -Dexpression=project.version -q -DforceStdout
                 '''
             }
         }
@@ -135,6 +169,67 @@ pipeline {
                 '''
             }
         }
+
+        stage('Publish WAR to Nexus') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'nexus-credentials',
+                    usernameVariable: 'NEXUS_USERNAME',
+                    passwordVariable: 'NEXUS_PASSWORD'
+                )]) {
+                    sh '''
+                        set +x
+                        cat > nexus-settings.xml <<EOF
+<settings xmlns="http://maven.apache.org/SETTINGS/1.2.0">
+  <servers>
+    <server>
+      <id>${NEXUS_REPO_ID}</id>
+      <username>${NEXUS_USERNAME}</username>
+      <password>${NEXUS_PASSWORD}</password>
+    </server>
+  </servers>
+</settings>
+EOF
+
+                        mvn -s nexus-settings.xml deploy:deploy-file \
+                          -DrepositoryId="${NEXUS_REPO_ID}" \
+                          -Durl="${NEXUS_REPO_URL}" \
+                          -Dfile=target/movie-ticket-booking.war \
+                          -DpomFile=pom.xml \
+                          -DgeneratePom=false
+
+                        rm -f nexus-settings.xml
+                        echo "Published movie-ticket-booking version ${RELEASE_VERSION} to Nexus."
+                    '''
+                }
+            }
+        }
+
+        stage('Commit Release Version') {
+            steps {
+                withCredentials([gitUsernamePassword(
+                    credentialsId: 'github-credentials',
+                    gitToolName: 'Default'
+                )]) {
+                    sh '''
+                        git config user.name "Jenkins CI"
+                        git config user.email "jenkins@localhost"
+
+                        git add pom.xml
+
+                        if git diff --cached --quiet; then
+                            echo "No POM version change to commit."
+                            exit 0
+                        fi
+
+                        git commit -m "chore: bump release version to ${RELEASE_VERSION}"
+                        git push origin HEAD:${GIT_BRANCH}
+
+                        echo "Committed release version ${RELEASE_VERSION} to GitHub."
+                    '''
+                }
+            }
+        }
     }
 
     post {
@@ -143,10 +238,10 @@ pipeline {
         }
         success {
             archiveArtifacts artifacts: 'target/*.war', allowEmptyArchive: true
-            echo "Pipeline completed successfully. Build: ${BUILD_NUMBER}"
+            echo "Pipeline completed successfully. Release version: ${RELEASE_VERSION}"
         }
         failure {
-            echo 'Pipeline failed. Check the Jenkins console log.'
+            echo 'Pipeline failed. The GitHub POM version is not advanced unless the release and deployment stages complete successfully.'
         }
     }
 }
