@@ -1,463 +1,158 @@
 pipeline {
-
     agent any
 
     environment {
-
-        // ============================================================
-        // APPLICATION
-        // ============================================================
-
         APP_NAME = 'movie-ticket-booking'
-        APP_VERSION = "${BUILD_NUMBER}"
-
-        WAR_FILE = "movie-ticket-booking-${BUILD_NUMBER}.war"
-
-
-        // ============================================================
-        // GITHUB
-        // ============================================================
-
+        APP_IMAGE = 'movie-ticket-booking'
+        DB_IMAGE = 'movie-ticket-db'
         GIT_REPO = 'https://github.com/bhanuroyal002/SimpleDocker.git'
         GIT_BRANCH = 'main'
-
-
-        // ============================================================
-        // MAVEN
-        // ============================================================
-
-        MAVEN_HOME = tool 'Maven-3.9'
-
+        MAVEN_HOME = tool('Maven-3.9')
         PATH = "${MAVEN_HOME}/bin:${env.PATH}"
-
-
-        // ============================================================
-        // SONARQUBE
-        // ============================================================
-
         SONARQUBE_SERVER = 'SonarQube'
-
-
-        // ============================================================
-        // ARTIFACTORY
-        // ============================================================
-
-        ARTIFACTORY_URL = 'http://YOUR_ARTIFACTORY_IP:8081/artifactory'
-
+        ARTIFACTORY_URL = 'http://YOUR_ARTIFACTORY_HOST:8081/artifactory'
         ARTIFACTORY_REPO = 'maven-releases'
-
-        ARTIFACTORY_CREDENTIALS =
-            credentials('artifactory-credentials')
-
-
-        // ============================================================
-        // DOCKER
-        // ============================================================
-
-        DOCKER_REGISTRY = 'local'
-
-        APP_IMAGE = 'movie-ticket-booking'
-
-        DB_IMAGE = 'movie-ticket-db'
-
-        IMAGE_TAG = "${BUILD_NUMBER}"
+        ARTIFACTORY_CREDENTIALS = credentials('artifactory-credentials')
     }
 
-
     stages {
-
-
-        // ============================================================
-        // 1. PULL CODE
-        // ============================================================
-
         stage('Pull Code') {
-
             steps {
-
-                echo '============================================'
-                echo 'Pulling code from GitHub'
-                echo '============================================'
-
-                git(
-                    branch: "${GIT_BRANCH}",
-                    url: "${GIT_REPO}",
-                    credentialsId: 'github-credentials'
+                checkout scmGit(
+                    branches: [[name: "*/${GIT_BRANCH}"]],
+                    userRemoteConfigs: [[
+                        url: "${GIT_REPO}",
+                        credentialsId: 'github-credentials'
+                    ]]
                 )
             }
         }
 
-
-        // ============================================================
-        // 2. MAVEN BUILD
-        // ============================================================
-
         stage('Maven Build') {
-
             steps {
-
-                echo '============================================'
-                echo 'Building Java application'
-                echo '============================================'
-
-                sh '''
-                    mvn clean package -DskipTests
-                '''
-
-                sh '''
-                    echo "Generated WAR:"
-                    ls -lh target/*.war
-                '''
+                sh 'mvn clean package'
+                sh 'ls -lh target/*.war'
             }
         }
 
-
-        // ============================================================
-        // 3. SONARQUBE CODE QUALITY
-        // ============================================================
-
         stage('Code Quality Analysis') {
-
             steps {
-
-                echo '============================================'
-                echo 'Running SonarQube analysis'
-                echo '============================================'
-
                 withSonarQubeEnv("${SONARQUBE_SERVER}") {
-
                     sh '''
-                        mvn sonar:sonar \
-                        -Dsonar.projectKey=movie-ticket-booking \
-                        -Dsonar.projectName=Movie-Ticket-Booking
+                        mvn sonar:sonar                           -Dsonar.projectKey=movie-ticket-booking                           -Dsonar.projectName=Movie-Ticket-Booking
                     '''
                 }
             }
         }
 
-
-        // ============================================================
-        // 4. QUALITY GATE
-        // ============================================================
-
         stage('Quality Gate') {
-
             steps {
-
-                echo '============================================'
-                echo 'Checking SonarQube Quality Gate'
-                echo '============================================'
-
-                timeout(
-                    time: 5,
-                    unit: 'MINUTES'
-                ) {
-
-                    waitForQualityGate(
-                        abortPipeline: true
-                    )
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
                 }
             }
         }
 
-
-        // ============================================================
-        // 5. PREPARE WAR
-        // ============================================================
-
         stage('Prepare WAR') {
-
             steps {
-
-                echo '============================================'
-                echo 'Preparing WAR artifact'
-                echo '============================================'
-
                 sh '''
-                    WAR_SOURCE=$(find target -maxdepth 1 \
-                        -name "*.war" \
-                        -type f \
-                        ! -name "*.original" \
-                        | head -1)
-
-                    if [ -z "$WAR_SOURCE" ]; then
-
-                        echo "ERROR: WAR file not found"
-
-                        exit 1
-
-                    fi
-
-                    echo "WAR Source:"
-                    echo "$WAR_SOURCE"
-
-                    cp "$WAR_SOURCE" "$WORKSPACE/${WAR_FILE}"
-
-                    echo "Prepared WAR:"
-                    ls -lh "$WORKSPACE/${WAR_FILE}"
+                    set -e
+                    WAR_SOURCE=$(find target -maxdepth 1 -type f -name "*.war" ! -name "*.original" | head -1)
+                    test -n "$WAR_SOURCE"
+                    cp "$WAR_SOURCE" "$WORKSPACE/movie-ticket-booking.war"
+                    ls -lh "$WORKSPACE/movie-ticket-booking.war"
                 '''
             }
         }
-
-
-        // ============================================================
-        // 6. UPLOAD WAR TO ARTIFACTORY
-        // ============================================================
 
         stage('Upload WAR to Artifactory') {
-
             steps {
-
-                echo '============================================'
-                echo 'Uploading WAR to Artifactory'
-                echo '============================================'
-
                 sh '''
-                    curl -f \
-                    -u "$ARTIFACTORY_CREDENTIALS_USR:$ARTIFACTORY_CREDENTIALS_PSW" \
-                    -T "$WORKSPACE/${WAR_FILE}" \
-                    "$ARTIFACTORY_URL/$ARTIFACTORY_REPO/$APP_NAME/$APP_VERSION/$WAR_FILE"
+                    set -e
+                    curl -f                       -u "$ARTIFACTORY_CREDENTIALS_USR:$ARTIFACTORY_CREDENTIALS_PSW"                       -T "$WORKSPACE/movie-ticket-booking.war"                       "$ARTIFACTORY_URL/$ARTIFACTORY_REPO/$APP_NAME/${BUILD_NUMBER}/movie-ticket-booking.war"
                 '''
-
-                echo 'WAR uploaded successfully.'
             }
         }
-
-
-        // ============================================================
-        // 7. DOWNLOAD WAR FROM ARTIFACTORY
-        // ============================================================
 
         stage('Download WAR from Artifactory') {
-
             steps {
-
-                echo '============================================'
-                echo 'Downloading WAR from Artifactory'
-                echo '============================================'
-
                 sh '''
-                    rm -f "$WORKSPACE/${WAR_FILE}"
-
-                    curl -f \
-                    -u "$ARTIFACTORY_CREDENTIALS_USR:$ARTIFACTORY_CREDENTIALS_PSW" \
-                    -o "$WORKSPACE/${WAR_FILE}" \
-                    "$ARTIFACTORY_URL/$ARTIFACTORY_REPO/$APP_NAME/$APP_VERSION/$WAR_FILE"
-
-                    echo "Downloaded WAR:"
-                    ls -lh "$WORKSPACE/${WAR_FILE}"
+                    set -e
+                    rm -f "$WORKSPACE/movie-ticket-booking.war"
+                    curl -f                       -u "$ARTIFACTORY_CREDENTIALS_USR:$ARTIFACTORY_CREDENTIALS_PSW"                       -o "$WORKSPACE/movie-ticket-booking.war"                       "$ARTIFACTORY_URL/$ARTIFACTORY_REPO/$APP_NAME/${BUILD_NUMBER}/movie-ticket-booking.war"
+                    ls -lh "$WORKSPACE/movie-ticket-booking.war"
                 '''
             }
         }
-
-
-        // ============================================================
-        // 8. BUILD APPLICATION DOCKER IMAGE
-        // ============================================================
 
         stage('Build App Docker Image') {
-
             steps {
-
-                echo '============================================'
-                echo 'Building Application Docker Image'
-                echo '============================================'
-
-                sh '''
-                    docker build \
-                    -t ${APP_IMAGE}:${IMAGE_TAG} \
-                    -f Dockerfile .
-                '''
-
-                sh '''
-                    docker images | grep ${APP_IMAGE}
-                '''
+                sh 'docker build --pull -t "${APP_IMAGE}:${BUILD_NUMBER}" -f Dockerfile .'
             }
         }
-
-
-        // ============================================================
-        // 9. BUILD DATABASE DOCKER IMAGE
-        // ============================================================
 
         stage('Build DB Docker Image') {
-
             steps {
+                sh 'docker build --pull -t "${DB_IMAGE}:${BUILD_NUMBER}" -f Dockerfile.db .'
+            }
+        }
 
-                echo '============================================'
-                echo 'Building Database Docker Image'
-                echo '============================================'
-
+        stage('Trivy Scan - App') {
+            steps {
                 sh '''
-                    docker build \
-                    -t ${DB_IMAGE}:${IMAGE_TAG} \
-                    -f Dockerfile.db .
-                '''
-
-                sh '''
-                    docker images | grep ${DB_IMAGE}
+                    trivy image                       --severity HIGH,CRITICAL                       --ignore-unfixed                       --exit-code 1                       "${APP_IMAGE}:${BUILD_NUMBER}"
                 '''
             }
         }
 
-
-        // ============================================================
-        // 10. TRIVY - APPLICATION IMAGE
-        // ============================================================
-
-        stage('Trivy Scan - Application') {
-
+        stage('Trivy Scan - DB') {
             steps {
-
-                echo '============================================'
-                echo 'Scanning Application Docker Image'
-                echo '============================================'
-
                 sh '''
-                    trivy image \
-                    --severity HIGH,CRITICAL \
-                    --exit-code 1 \
-                    --ignore-unfixed \
-                    ${APP_IMAGE}:${IMAGE_TAG}
+                    trivy image                       --severity HIGH,CRITICAL                       --ignore-unfixed                       --exit-code 1                       "${DB_IMAGE}:${BUILD_NUMBER}"
                 '''
             }
         }
-
-
-        // ============================================================
-        // 11. TRIVY - DATABASE IMAGE
-        // ============================================================
-
-        stage('Trivy Scan - Database') {
-
-            steps {
-
-                echo '============================================'
-                echo 'Scanning Database Docker Image'
-                echo '============================================'
-
-                sh '''
-                    trivy image \
-                    --severity HIGH,CRITICAL \
-                    --exit-code 1 \
-                    --ignore-unfixed \
-                    ${DB_IMAGE}:${IMAGE_TAG}
-                '''
-            }
-        }
-
-
-        // ============================================================
-        // 12. DOCKER COMPOSE DEPLOYMENT
-        // ============================================================
 
         stage('Docker Compose Deploy') {
-
             steps {
-
-                echo '============================================'
-                echo 'Deploying using Docker Compose'
-                echo '============================================'
-
                 sh '''
-                    export IMAGE_TAG=${IMAGE_TAG}
-
+                    export IMAGE_TAG="${BUILD_NUMBER}"
                     docker compose down || true
-
                     docker compose up -d
                 '''
             }
         }
 
-
-        // ============================================================
-        // 13. VERIFY DEPLOYMENT
-        // ============================================================
-
         stage('Verify Deployment') {
-
             steps {
-
-                echo '============================================'
-                echo 'Verifying deployment'
-                echo '============================================'
-
                 sh '''
                     docker compose ps
-                '''
-
-                sh '''
-                    docker ps
-                '''
-
-                sh '''
-                    sleep 10
-
-                    curl -f http://localhost:8081/health
+                    for i in $(seq 1 12); do
+                        if curl -fsS http://localhost:8081/health; then
+                            echo
+                            echo "Application is healthy."
+                            exit 0
+                        fi
+                        echo "Waiting for application..."
+                        sleep 5
+                    done
+                    docker compose logs --tail=100 app
+                    exit 1
                 '''
             }
         }
     }
 
-
-    // ================================================================
-    // POST BUILD
-    // ================================================================
-
     post {
-
-        success {
-
-            echo '''
-            ============================================
-                 PIPELINE EXECUTION SUCCESSFUL
-            ============================================
-
-            Application:
-            movie-ticket-booking
-
-            Build:
-            ${BUILD_NUMBER}
-
-            App Image:
-            movie-ticket-booking:${BUILD_NUMBER}
-
-            DB Image:
-            movie-ticket-db:${BUILD_NUMBER}
-
-            Application:
-            http://<SERVER-IP>:8081
-
-            ============================================
-            '''
-        }
-
-
-        failure {
-
-            echo '''
-            ============================================
-                    PIPELINE EXECUTION FAILED
-            ============================================
-
-            Check the Jenkins console output.
-
-            ============================================
-            '''
-        }
-
-
         always {
-
-            archiveArtifacts(
-                artifacts: '*.war',
-                allowEmptyArchive: true
-            )
-
-            junit(
-                testResults: 'target/surefire-reports/*.xml',
-                allowEmptyResults: true
-            )
+            archiveArtifacts artifacts: 'movie-ticket-booking.war', allowEmptyArchive: true
+            junit testResults: 'target/surefire-reports/*.xml', allowEmptyResults: true
+        }
+        success {
+            echo "Pipeline completed successfully. Build: ${BUILD_NUMBER}"
+        }
+        failure {
+            echo 'Pipeline failed. Check the Jenkins console log.'
         }
     }
 }
