@@ -2,7 +2,7 @@
 
 A Spring Boot movie ticket booking application for practicing an end-to-end DevOps CI/CD workflow with Jenkins, Maven, SonarQube, Nexus Repository, Docker, MySQL, Trivy and Docker Compose.
 
-The project also includes a cinema-marketplace-style MovieMate frontend with movie banners, search, category navigation, hero carousel, recommended movie cards and a dedicated booking page.
+The project also includes a premium cinema-style MovieMate frontend inspired by luxury cinema sites, with full-bleed cinematic hero artwork, poster-led movie discovery, quick booking controls and a dedicated booking page.
 
 ## Stack
 - Java 17
@@ -21,12 +21,13 @@ The project also includes a cinema-marketplace-style MovieMate frontend with mov
 - Trivy
 
 ## Application Features
-- Cinema-marketplace-style responsive MovieMate UI
-- Dark header/navigation with orange/red accents
-- Search bar, location selector, category navigation and hero carousel
-- Recommended movie card grid with genre filters and quick booking
+- Premium cinema-style responsive MovieMate UI
+- Dark cinematic navigation with orange/red and warm-gold accents
+- Full-bleed cinematic hero with featured poster, backdrop treatment and carousel controls
+- Quick-book widget for movie/date selection
+- Poster-led Now Showing grid with genre filters, hover booking CTA and pricing
 - Dynamic movie listing from `/api/movies`
-- Local movie banner artwork for Avatar, Avengers and Inception
+- Custom local SVG poster/banner artwork for Avatar, Avengers and Inception
 - Clickable movie cards that navigate to the dedicated booking page
 - Dedicated `/booking.html?movieId=<id>` booking flow
 - Showtime selection
@@ -332,7 +333,7 @@ Implemented:
 - Docker Compose deployment
 - Input validation
 - MySQL persistence
-- Responsive cinema-marketplace frontend
+- Responsive premium cinema frontend
 - Search and movie filters
 - Hero movie carousel
 - Dedicated movie booking page
