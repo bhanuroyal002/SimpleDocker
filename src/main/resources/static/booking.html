@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MovieMate | Book Tickets</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="booking-page">
+<header class="navbar">
+  <a class="brand" href="/"><span class="brand-mark">M</span><span>Movie<span>Mate</span></span></a>
+  <a class="nav-cta" href="/">← Back to Movies</a>
+</header>
+<main class="booking-main">
+  <div class="booking-shell">
+    <a class="back-link" href="/">← Browse all movies</a>
+    <span class="eyebrow">YOUR MOVIE NIGHT</span>
+    <h1 class="booking-title">Choose your <em>seats.</em></h1>
+    <div class="booking-layout">
+      <div class="selected-banner"><img id="selectedMovieBanner" src="/banners/cinema.svg" alt="Selected movie banner"></div>
+      <div class="booking-panel">
+        <div class="booking-head">
+          <div><span class="eyebrow">BOOK TICKETS</span><h2 id="selectedMovieTitle">Loading movie…</h2><p id="selectedMovieMeta">Please wait.</p></div>
+          <a class="change-link" href="/">Change movie</a>
+        </div>
+        <div class="form-row">
+          <div><label for="customerName">Full name</label><input id="customerName" maxlength="80" placeholder="Your name" autocomplete="name"></div>
+          <div><label for="email">Email</label><input id="email" type="email" maxlength="160" placeholder="you@example.com" autocomplete="email"></div>
+          <div class="full"><label for="showtime">Showtime</label><select id="showtime"><option>10:30 AM</option><option>1:30 PM</option><option>4:30 PM</option><option>7:30 PM</option><option>10:30 PM</option></select></div>
+        </div>
+        <div class="seat-area">
+          <div class="screen">SCREEN</div>
+          <div id="seatGrid" class="seat-grid"></div>
+          <div class="legend"><span><i class="seat available"></i>Available</span><span><i class="seat selected"></i>Selected</span><span><i class="seat unavailable"></i>Unavailable</span></div>
+        </div>
+        <div class="summary">
+          <div><span>Seats</span><strong id="seatSummary">None</strong></div>
+          <div><span>Tickets</span><strong id="ticketCount">0</strong></div>
+          <div><span>Total</span><strong id="totalPrice">₹0</strong></div>
+          <button id="bookButton" class="primary-btn" disabled>Confirm Booking <span>→</span></button>
+        </div>
+        <div id="bookingMessage" class="booking-message" role="status"></div>
+      </div>
+    </div>
+  </div>
+</main>
+<div id="toast" class="toast" role="alert"></div>
+<script src="/booking.js"></script>
+</body>
+</html>
