@@ -1,58 +1,93 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="MovieMate movie tickets"><title>MovieMate | Movies & Tickets</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="MovieMate premium movie ticket booking">
+<title>MovieMate | Cinema, Movies & Tickets</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body class="home-page">
 <header class="topbar">
   <div class="topbar-inner">
     <a class="brand" href="/"><span class="brand-mark">M</span><span>Movie<span>Mate</span></span></a>
-    <div class="location"><span class="pin">⌖</span><div><small>Location</small><strong>Chennai</strong></div><span class="chev">⌄</span></div>
-    <div class="searchbox"><span>⌕</span><input id="movieSearch" placeholder="Search for Movies, Events or Cinemas"></div>
+    <nav class="main-nav" aria-label="Primary"><a class="active" href="#movies">Movies</a><a href="#experience">Cinemas</a><a href="#offers">Offers</a><a href="#experience">Experiences</a></nav>
+    <div class="location"><span class="pin">⌖</span><div><small>YOUR CITY</small><strong>Chennai</strong></div><span class="chev">⌄</span></div>
+    <div class="searchbox"><span>⌕</span><input id="movieSearch" aria-label="Search movies" placeholder="Search movies, genres or cinemas"></div>
     <button class="login-btn">Login</button>
-    <button class="menu-btn" aria-label="Menu">☰</button>
   </div>
 </header>
-<nav class="categorybar">
-  <div class="category-inner">
-    <div class="categories"><a class="active" href="#movies">Movies</a><a href="#movies">Stream</a><a href="#experience">Events</a><a href="#experience">Plays</a><a href="#experience">Sports</a></div>
-    <div class="right-cats"><a href="#movies">Offers</a><a href="#experience">Gift Cards</a></div>
-  </div>
-</nav>
 
 <main>
-<section class="hero-strip">
-  <div class="hero-carousel" id="heroCarousel">
-    <button class="hero-arrow left" onclick="changeHero(-1)">‹</button>
-    <div class="hero-slides">
-      <article class="hero-slide active" data-movie="1"><img src="/banners/avatar.svg" alt="Avatar"><div class="hero-overlay"></div><div class="hero-content"><span>NOW SHOWING</span><h1>Avatar</h1><p>Experience the story on the big screen.</p><button onclick="goToBooking(1)">Book Tickets</button></div></article>
-      <article class="hero-slide" data-movie="2"><img src="/banners/avengers.svg" alt="Avengers"><div class="hero-overlay"></div><div class="hero-content"><span>NOW SHOWING</span><h1>Avengers</h1><p>Assemble your movie night.</p><button onclick="goToBooking(2)">Book Tickets</button></div></article>
-      <article class="hero-slide" data-movie="3"><img src="/banners/inception.svg" alt="Inception"><div class="hero-overlay"></div><div class="hero-content"><span>NOW SHOWING</span><h1>Inception</h1><p>Enter a world where every level changes the story.</p><button onclick="goToBooking(3)">Book Tickets</button></div></article>
+<section class="cinematic-hero" aria-label="Featured movies">
+  <div class="hero-backdrop" id="heroBackdrop"></div>
+  <div class="hero-vignette"></div>
+  <div class="hero-inner">
+    <div class="hero-copy">
+      <span class="eyebrow">NOW SHOWING · MOVIEMATE PREMIERE</span>
+      <h1 id="heroTitle">Cinema starts here.</h1>
+      <p id="heroDescription">Discover the stories worth seeing on the big screen.</p>
+      <div class="hero-meta" id="heroMeta"><span>Premium Screen</span><i>•</i><span>Chennai</span></div>
+      <div class="hero-actions"><button class="primary-hero" id="heroBook">Book Tickets <span>→</span></button><a href="#movies" class="ghost-hero">Explore Movies</a></div>
     </div>
-    <button class="hero-arrow right" onclick="changeHero(1)">›</button>
-    <div class="hero-dots"><button class="dot active" onclick="setHero(0)"></button><button class="dot" onclick="setHero(1)"></button><button class="dot" onclick="setHero(2)"></button></div>
+    <div class="hero-poster-wrap">
+      <div class="poster-glow"></div>
+      <img id="heroPoster" src="/banners/cinema.svg" alt="Featured movie poster">
+      <span class="poster-ribbon">FEATURED</span>
+    </div>
+  </div>
+  <div class="hero-controls">
+    <button id="heroPrev" aria-label="Previous movie">‹</button>
+    <div id="heroDots"></div>
+    <button id="heroNext" aria-label="Next movie">›</button>
+  </div>
+  <div class="hero-quick">
+    <div><span>QUICK BOOK</span><strong>Pick a movie and get your seats in seconds.</strong></div>
+    <label>Movie<select id="quickMovie"><option>Loading movies…</option></select></label>
+    <label>Date<select><option>Today</option><option>Tomorrow</option><option>This weekend</option></select></label>
+    <button id="quickBook">Find Showtimes <span>→</span></button>
   </div>
 </section>
 
 <section id="movies" class="content-section">
-  <div class="section-title-row"><div><h2>Recommended Movies</h2><p>Book tickets for the latest movies playing near you</p></div><a href="#movies">See All <span>›</span></a></div>
-  <div class="filter-row"><button class="filter active" data-filter="all">All</button><button class="filter" data-filter="action">Action</button><button class="filter" data-filter="sci-fi">Sci-Fi</button><button class="filter" data-filter="thriller">Thriller</button><span id="movieCount" class="result-count">Loading…</span></div>
-  <div id="movieGrid" class="movie-grid"><div class="loading">Loading movies…</div></div>
+  <div class="section-title-row">
+    <div><span class="section-kicker">THE BIG SCREEN</span><h2>Now Showing</h2><p>Handpicked movies, premium artwork and one-tap booking.</p></div>
+    <a href="#movies">View all <span>→</span></a>
+  </div>
+  <div class="filter-row">
+    <button class="filter active" data-filter="all">All Movies</button>
+    <button class="filter" data-filter="action">Action</button>
+    <button class="filter" data-filter="sci-fi">Sci-Fi</button>
+    <button class="filter" data-filter="thriller">Thriller</button>
+    <span id="movieCount" class="result-count">Loading…</span>
+  </div>
+  <div id="movieGrid" class="movie-grid"><div class="loading">Preparing the cinema…</div></div>
 </section>
 
-<section class="promo-strip">
-  <div class="promo-copy"><span>MOVIEMATE EXCLUSIVE</span><h2>Make your movie night<br><em>worth remembering.</em></h2><p>Choose a movie, pick your seats and get your confirmation in seconds.</p></div>
-  <div class="promo-ticket"><strong>ADMIT ONE</strong><span>MM · 2026</span><b>→</b></div>
+<section id="offers" class="feature-banner">
+  <div class="feature-art"></div>
+  <div class="feature-content">
+    <span class="section-kicker">MOVIEMATE PREMIERE</span>
+    <h2>Your seat.<br><em>Your story.</em></h2>
+    <p>From first frame to final scene, make your movie night feel like an event.</p>
+    <a href="#movies">Browse tonight's movies <span>→</span></a>
+  </div>
+  <div class="film-strip"><span>MM</span><span>2026</span><span>01</span><span>02</span><span>03</span></div>
 </section>
 
-<section id="experience" class="content-section why-section">
-  <div class="section-title-row"><div><h2>Why MovieMate?</h2><p>A simple cinema experience built around your next movie.</p></div></div>
-  <div class="why-grid"><article><b>01</b><span>Discover</span><p>Browse movies with posters, genres and prices at a glance.</p></article><article><b>02</b><span>Choose</span><p>Select your showtime and seats without leaving the booking flow.</p></article><article><b>03</b><span>Enjoy</span><p>Get an instant booking confirmation and head to the big screen.</p></article></div>
+<section id="experience" class="content-section experience-section">
+  <div class="section-title-row">
+    <div><span class="section-kicker">THE MOVIEMATE EXPERIENCE</span><h2>More than a ticket.</h2><p>A premium-looking journey without the premium complexity.</p></div>
+  </div>
+  <div class="experience-grid">
+    <article><div class="experience-icon">01</div><h3>Discover</h3><p>Browse poster-led movie collections with genre, price and story at a glance.</p></article>
+    <article><div class="experience-icon">02</div><h3>Choose</h3><p>Pick a showtime, select your seats and keep the entire booking journey focused.</p></article>
+    <article><div class="experience-icon">03</div><h3>Enjoy</h3><p>Get an instant confirmation and walk into the cinema knowing your seats are ready.</p></article>
+  </div>
 </section>
 </main>
-<footer><span>© 2026 MovieMate</span><span>Made for movie nights.</span></footer>
+
+<footer><div><a class="brand footer-brand" href="/"><span class="brand-mark">M</span><span>Movie<span>Mate</span></span></a><p>Tonight starts here.</p></div><span>© 2026 MovieMate</span></footer>
 <div id="toast" class="toast"></div>
 <script src="/app.js"></script>
 </body>
