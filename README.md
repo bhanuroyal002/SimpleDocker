@@ -2,7 +2,7 @@
 
 A Spring Boot movie ticket booking application for practicing an end-to-end DevOps CI/CD workflow with Jenkins, Maven, SonarQube, Nexus Repository, Docker, MySQL, Trivy and Docker Compose.
 
-The project also includes a cinematic MovieMate frontend with movie banners, a dedicated booking page and an automated versioned WAR release flow.
+The project also includes a cinema-marketplace-style MovieMate frontend with movie banners, search, category navigation, hero carousel, recommended movie cards and a dedicated booking page.
 
 ## Stack
 - Java 17
@@ -21,8 +21,10 @@ The project also includes a cinematic MovieMate frontend with movie banners, a d
 - Trivy
 
 ## Application Features
-- Cinematic responsive MovieMate UI
-- Dark cinema-style layout with orange/red accents
+- Cinema-marketplace-style responsive MovieMate UI
+- Dark header/navigation with orange/red accents
+- Search bar, location selector, category navigation and hero carousel
+- Recommended movie card grid with genre filters and quick booking
 - Dynamic movie listing from `/api/movies`
 - Local movie banner artwork for Avatar, Avengers and Inception
 - Clickable movie cards that navigate to the dedicated booking page
@@ -114,9 +116,9 @@ http://<EC2_PUBLIC_IP>:8081/api/health
 | `pom.xml` | Maven build, dependencies, Nexus metadata, Sonar Maven plugin and JaCoCo |
 | `MovieBookingApplication.java` | Spring Boot application and REST APIs |
 | `MovieBookingApplicationTest.java` | Controller/API tests |
-| `static/index.html` | MovieMate home/movie-selection page |
+| `static/index.html` | MovieMate cinema-style home/movie-selection page |
 | `static/style.css` | Frontend and booking-page styling |
-| `static/app.js` | Movie listing and booking-page navigation |
+| `static/app.js` | Movie listing, search, filters, hero carousel and booking navigation |
 | `static/booking.html` | Dedicated ticket booking page |
 | `static/booking.js` | Booking-page seats and API integration |
 | `static/banners/*.svg` | Local movie/cinema banner artwork |
@@ -330,7 +332,9 @@ Implemented:
 - Docker Compose deployment
 - Input validation
 - MySQL persistence
-- Responsive cinematic frontend
+- Responsive cinema-marketplace frontend
+- Search and movie filters
+- Hero movie carousel
 - Dedicated movie booking page
 - Local movie banner assets
 
