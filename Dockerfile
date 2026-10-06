@@ -2,7 +2,7 @@ FROM eclipse-temurin:17-jre
 
 WORKDIR /app
 
-COPY movie-ticket-booking.war app.war
+COPY target/movie-ticket-booking.war app.war
 
 EXPOSE 8080
 
