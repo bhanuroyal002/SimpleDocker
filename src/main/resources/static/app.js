@@ -1,99 +1,13 @@
-const state = {
-  selectedMovie: null,
-  selectedSeats: new Set()
-};
-
-const movies = [
-  { name: "Avatar", genre: "Sci-Fi", price: 220, className: "avatar", icon: "🌌" },
-  { name: "Avengers", genre: "Action", price: 250, className: "avengers", icon: "🦸" },
-  { name: "Inception", genre: "Sci-Fi", price: 230, className: "inception", icon: "🌀" }
-];
-
-const movieGrid = document.getElementById("movieGrid");
-const movieCount = document.getElementById("movieCount");
-const selectedMovieTitle = document.getElementById("selectedMovieTitle");
-const selectedMovieMeta = document.getElementById("selectedMovieMeta");
-const seatGrid = document.getElementById("seatGrid");
-const seatSummary = document.getElementById("seatSummary");
-const totalPrice = document.getElementById("totalPrice");
-const bookButton = document.getElementById("bookButton");
-const bookingMessage = document.getElementById("bookingMessage");
-const showtime = document.getElementById("showtime");
-
-function renderMovies() {
-  movieCount.textContent = `${movies.length} movies available`;
-  movieGrid.innerHTML = movies.map((movie, index) => `
-    <article class="movie-card">
-      <div class="poster ${movie.className}">${movie.icon} ${movie.name}</div>
-      <div class="movie-body">
-        <h3>${movie.name}</h3>
-        <p>${movie.genre} · From ₹${movie.price}</p>
-        <button class="secondary-btn" onclick="selectMovie(${index})">Book tickets</button>
-      </div>
-    </article>
-  `).join("");
-}
-
-function selectMovie(index) {
-  state.selectedMovie = movies[index];
-  state.selectedSeats.clear();
-  selectedMovieTitle.textContent = state.selectedMovie.name;
-  selectedMovieMeta.textContent = `${state.selectedMovie.genre} · ₹${state.selectedMovie.price} per ticket`;
-  bookingMessage.textContent = "";
-  renderSeats();
-  updateSummary();
-  document.getElementById("booking").scrollIntoView({ behavior: "smooth" });
-}
-
-function renderSeats() {
-  const seats = [];
-  for (let row = 0; row < 5; row++) {
-    for (let col = 1; col <= 8; col++) {
-      const label = String.fromCharCode(65 + row) + col;
-      const unavailable = ["A3", "B6", "C2", "D7", "E4"].includes(label);
-      seats.push(`
-        <button class="seat-btn ${unavailable ? "unavailable" : ""} ${state.selectedSeats.has(label) ? "selected" : ""}"
-          aria-label="Seat ${label}" ${unavailable ? "disabled" : ""}
-          onclick="toggleSeat('${label}')">
-          <i class="seat"></i>
-        </button>
-      `);
-    }
-  }
-  seatGrid.innerHTML = seats.join("");
-}
-
-function toggleSeat(label) {
-  if (!state.selectedMovie) return;
-  if (state.selectedSeats.has(label)) {
-    state.selectedSeats.delete(label);
-  } else {
-    state.selectedSeats.add(label);
-  }
-  renderSeats();
-  updateSummary();
-}
-
-function updateSummary() {
-  const selected = [...state.selectedSeats].sort();
-  seatSummary.textContent = selected.length ? selected.join(", ") : "None";
-  const total = state.selectedMovie ? selected.length * state.selectedMovie.price : 0;
-  totalPrice.textContent = `₹${total}`;
-  bookButton.disabled = !state.selectedMovie || selected.length === 0;
-}
-
-bookButton.addEventListener("click", () => {
-  const selected = [...state.selectedSeats].sort();
-  if (!state.selectedMovie || selected.length === 0) return;
-
-  const time = showtime.value;
-  bookingMessage.textContent =
-    `Booking confirmed! ${state.selectedMovie.name} · ${time} · Seats ${selected.join(", ")} · Total ₹${selected.length * state.selectedMovie.price}`;
-});
-
-fetch("/movies")
-  .then(response => response.text())
-  .then(() => renderMovies())
-  .catch(() => renderMovies());
-
-renderMovies();
+const state={movies:[],selectedMovie:null,selectedSeats:new Set(),submitting:false};
+const $=id=>document.getElementById(id);
+const unavailable=new Set(["A3","B6","C2","D7","E4"]);
+async function loadMovies(){try{const r=await fetch("/api/movies");if(!r.ok)throw Error();state.movies=await r.json();renderMovies();}catch(e){$("movieGrid").innerHTML='<div class="error-card">Unable to load movies. Please refresh and try again.</div>';$("movieCount").textContent="Unavailable";}}
+function renderMovies(){$("movieCount").textContent=state.movies.length+" movies available";const icons=["🌌","🦸","🌀"],classes=["avatar","avengers","inception"];$("movieGrid").innerHTML=state.movies.map((m,i)=>'<article class="movie-card"><div class="poster '+classes[i%3]+'"><span>'+icons[i%3]+'</span><b>'+esc(m.name)+'</b></div><div class="movie-body"><span class="pill">'+esc(m.genre)+'</span><h3>'+esc(m.name)+'</h3><p>'+esc(m.description||"Book your seats now.")+'</p><div class="movie-bottom"><strong>₹'+m.price+'</strong><button class="secondary-btn" onclick="selectMovie('+m.id+')">Book now</button></div></div></article>').join("");}
+function selectMovie(id){state.selectedMovie=state.movies.find(m=>m.id===id);state.selectedSeats.clear();$("selectedMovieTitle").textContent=state.selectedMovie.name;$("selectedMovieMeta").textContent=state.selectedMovie.genre+" · ₹"+state.selectedMovie.price+" per ticket";$("bookingMessage").textContent="";renderSeats();updateSummary();$("booking").scrollIntoView({behavior:"smooth",block:"start"});}
+function renderSeats(){if(!state.selectedMovie){$("seatGrid").innerHTML="";return;}let html="";for(let r=0;r<5;r++)for(let c=1;c<=8;c++){const s=String.fromCharCode(65+r)+c,b=unavailable.has(s);html+='<button class="seat-btn '+(b?"unavailable ":"")+(state.selectedSeats.has(s)?"selected":"")+'" '+(b?"disabled":"")+' onclick="toggleSeat(\''+s+'\')" aria-label="Seat '+s+'"><i class="seat"></i></button>';}$("seatGrid").innerHTML=html;}
+function toggleSeat(s){if(state.selectedSeats.has(s))state.selectedSeats.delete(s);else if(state.selectedSeats.size<6)state.selectedSeats.add(s);else return toast("You can select up to 6 seats.");renderSeats();updateSummary();}
+function updateSummary(){const seats=[...state.selectedSeats].sort();$("seatSummary").textContent=seats.length?seats.join(", "):"None";$("ticketCount").textContent=seats.length;$("totalPrice").textContent="₹"+(state.selectedMovie?seats.length*state.selectedMovie.price:0);$("bookButton").disabled=!state.selectedMovie||!seats.length||state.submitting;}
+async function submitBooking(){if(!state.selectedMovie||!state.selectedSeats.size||state.submitting)return;const name=$("customerName").value.trim(),email=$("email").value.trim();if(!name)return toast("Please enter your full name.");if(!email||!/^S+@S+.S+$/.test(email))return toast("Please enter a valid email.");state.submitting=true;updateSummary();$("bookButton").textContent="Booking…";try{const r=await fetch("/api/bookings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({movieId:state.selectedMovie.id,customerName:name,email:email,showTime:$("showtime").value,seats:[...state.selectedSeats].sort()})});const data=await r.json();if(!r.ok)throw Error(data.message||"Booking failed");$("bookingMessage").innerHTML="✓ Booking confirmed! <b>#"+data.bookingId+"</b> · "+esc(state.selectedMovie.name)+" · "+esc(data.showTime)+" · Seats "+esc(data.seats.join(", "))+" · ₹"+data.totalAmount;toast("Booking confirmed successfully!");state.selectedSeats.clear();renderSeats();updateSummary();}catch(e){toast(e.message||"Booking failed. Please try again.");}finally{state.submitting=false;$("bookButton").textContent="Confirm Booking";updateSummary();}}
+function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),3200);}
+function esc(v){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
+$("bookButton").addEventListener("click",submitBooking);$("changeMovie").addEventListener("click",()=>$("movies").scrollIntoView({behavior:"smooth"}));renderSeats();updateSummary();loadMovies();
