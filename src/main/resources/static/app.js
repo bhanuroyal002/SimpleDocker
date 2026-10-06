@@ -1,4 +1,10 @@
-const state={movies:[],filter:"all",hero:0};
+const fallbackMovies=[
+  {id:1,name:"Avatar",genre:"Sci-Fi",price:250,description:"Experience an extraordinary journey beyond the stars."},
+  {id:2,name:"Avengers",genre:"Action",price:220,description:"Assemble for an unforgettable superhero movie night."},
+  {id:3,name:"Inception",genre:"Thriller",price:200,description:"Enter a world where every level changes the story."}
+];
+
+const state={movies:[],filter:"all",hero:0,apiAvailable:false};
 const $=id=>document.getElementById(id);
 
 function bannerFor(movie){
@@ -13,13 +19,26 @@ async function loadMovies(){
   try{
     const r=await fetch("/api/movies",{cache:"no-store"});
     if(!r.ok)throw Error("API "+r.status);
-    state.movies=await r.json();
-    renderMovies();
-    renderHero();
-    renderQuickMovie();
+    const data=await r.json();
+    if(!Array.isArray(data)||!data.length)throw Error("No movies returned");
+    state.movies=data;
+    state.apiAvailable=true;
   }catch(e){
-    $("movieGrid").innerHTML='<div class="error-card"><strong>Movies could not be loaded.</strong><span>Check the application and database, then refresh.</span><button onclick="loadMovies()">Retry</button></div>';
-    $("movieCount").textContent="Unavailable";
+    console.warn("Movie API unavailable. Rendering local fallback artwork.",e);
+    state.movies=fallbackMovies;
+    state.apiAvailable=false;
+  }
+  renderMovies();
+  renderHero();
+  renderQuickMovie();
+  updateApiStatus();
+}
+
+function updateApiStatus(){
+  const count=$("movieCount");
+  if(!state.apiAvailable){
+    count.textContent=state.movies.length+" movies · offline preview";
+    count.title="Movie API is currently unavailable. Local movie artwork is being shown.";
   }
 }
 
@@ -41,30 +60,52 @@ function setHero(i){
   if(!state.movies.length)return;
   state.hero=(i+state.movies.length)%state.movies.length;
   renderHero();
+  renderQuickMovie();
 }
 function changeHero(d){setHero(state.hero+d);}
 
 function renderQuickMovie(){
   const select=$("quickMovie");
+  if(!state.movies.length)return;
   select.innerHTML=state.movies.map(m=>'<option value="'+m.id+'">'+esc(m.name)+" · ₹"+m.price+"</option>").join("");
   select.value=state.movies[state.hero]?.id||state.movies[0]?.id;
 }
+
 function renderMovies(){
   const filtered=state.movies.filter(m=>state.filter==="all"||(m.genre||"").toLowerCase().includes(state.filter));
   $("movieCount").textContent=filtered.length+" movie"+(filtered.length===1?"":"s");
-  if(!filtered.length){$("movieGrid").innerHTML='<div class="error-card"><strong>No movies found</strong><span>Try another genre.</span></div>';return;}
+  if(!filtered.length){
+    $("movieGrid").innerHTML='<div class="error-card"><strong>No movies found</strong><span>Try another genre.</span></div>';
+    return;
+  }
+
   $("movieGrid").innerHTML=filtered.map((m,i)=>{
     const b=bannerFor(m);
-    return '<article class="movie-card" onclick="goToBooking('+m.id+')"><div class="poster-wrap"><img src="'+b.image+'" alt="'+esc(m.name)+' poster"><div class="poster-shade"></div><span class="poster-tag">'+esc(b.tag)+'</span><span class="poster-index">'+String(i+1).padStart(2,"0")+'</span><button class="quick-book" onclick="event.stopPropagation();goToBooking('+m.id+')">Book Ticket <span>→</span></button></div><div class="movie-body"><div class="movie-topline"><span>'+esc(m.genre||"Movie")+'</span><b>₹'+m.price+'</b></div><h3>'+esc(m.name)+'</h3><p>'+esc(m.description||"Book your seats for the next show.")+'</p><div class="card-bottom"><span>Available today</span><strong>View details →</strong></div></div></article>';
+    return '<article class="movie-card" onclick="goToBooking('+m.id+')">'+
+      '<div class="poster-wrap">'+
+      '<img src="'+b.image+'" alt="'+esc(m.name)+' poster" loading="eager">'+
+      '<div class="poster-shade"></div>'+
+      '<span class="poster-tag">'+esc(b.tag)+'</span>'+
+      '<span class="poster-index">'+String(i+1).padStart(2,"0")+'</span>'+
+      '<button class="quick-book" onclick="event.stopPropagation();goToBooking('+m.id+')">Book Ticket <span>→</span></button>'+
+      '</div>'+
+      '<div class="movie-body">'+
+      '<div class="movie-topline"><span>'+esc(m.genre||"Movie")+'</span><b>₹'+m.price+'</b></div>'+
+      '<h3>'+esc(m.name)+'</h3>'+
+      '<p>'+esc(m.description||"Book your seats for the next show.")+'</p>'+
+      '<div class="card-bottom"><span>Available today</span><strong>View details →</strong></div>'+
+      '</div></article>';
   }).join("");
 }
 
 function goToBooking(id){window.location.href="/booking.html?movieId="+encodeURIComponent(id);}
-function esc(v){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
+function esc(v){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",""":"&quot;","'":"&#039;"}[c]));}
 
 document.querySelectorAll(".filter").forEach(btn=>btn.addEventListener("click",()=>{
   document.querySelectorAll(".filter").forEach(x=>x.classList.remove("active"));
-  btn.classList.add("active");state.filter=btn.dataset.filter;renderMovies();
+  btn.classList.add("active");
+  state.filter=btn.dataset.filter;
+  renderMovies();
 }));
 
 $("movieSearch").addEventListener("input",e=>{
