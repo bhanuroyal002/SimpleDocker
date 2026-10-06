@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MovieMate - Movie Ticket Booking</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="navbar">
+    <div class="brand">🎬 MovieMate</div>
+    <nav>
+      <a href="#movies">Movies</a>
+      <a href="#booking">Book Tickets</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div>
+        <span class="eyebrow">MOVIE TICKET BOOKING</span>
+        <h1>Pick a movie.<br><span>Pick your seats.</span><br>Enjoy the show.</h1>
+        <p>Browse today's movies and reserve your seats in a few clicks.</p>
+        <a class="primary-btn" href="#movies">Browse Movies</a>
+      </div>
+      <div class="hero-card">
+        <div class="ticket-icon">🎟️</div>
+        <h3>Fast & Simple</h3>
+        <p>Choose a movie, select seats and confirm your booking.</p>
+      </div>
+    </section>
+
+    <section id="movies" class="section">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">NOW SHOWING</span>
+          <h2>Choose your movie</h2>
+        </div>
+        <span id="movieCount" class="count-badge">Loading…</span>
+      </div>
+      <div id="movieGrid" class="movie-grid"></div>
+    </section>
+
+    <section id="booking" class="section booking-section">
+      <div class="booking-panel">
+        <div>
+          <span class="eyebrow">YOUR BOOKING</span>
+          <h2 id="selectedMovieTitle">Select a movie to begin</h2>
+          <p id="selectedMovieMeta">Choose a movie above.</p>
+        </div>
+
+        <div class="booking-controls">
+          <label for="showtime">Showtime</label>
+          <select id="showtime">
+            <option>10:30 AM</option>
+            <option>1:30 PM</option>
+            <option>4:30 PM</option>
+            <option>7:30 PM</option>
+            <option>10:30 PM</option>
+          </select>
+        </div>
+
+        <div class="seat-area">
+          <div class="screen">SCREEN</div>
+          <div id="seatGrid" class="seat-grid"></div>
+          <div class="legend">
+            <span><i class="seat available"></i> Available</span>
+            <span><i class="seat selected"></i> Selected</span>
+          </div>
+        </div>
+
+        <div class="summary">
+          <div>
+            <span>Selected seats</span>
+            <strong id="seatSummary">None</strong>
+          </div>
+          <div>
+            <span>Total</span>
+            <strong id="totalPrice">₹0</strong>
+          </div>
+          <button id="bookButton" class="primary-btn" disabled>Confirm Booking</button>
+        </div>
+        <div id="bookingMessage" class="booking-message"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>MovieMate</span>
+    <span>Demo booking experience</span>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>
